@@ -40,15 +40,6 @@ private:
     Int _substeps = 1;
 };
 
-q3BodyDef ContainerDefinition() {
-    q3BodyDef definition;
-
-    q3Transform tx;
-    definition.Set(tx, q3Vec3(8.0f, 1.0f, 8.0f));
-
-    definition.
-}
-
 q3BodyDef DiceDefinition()
 {
     static const float INITIAL_ANGULAR_MIN = 2.f;
@@ -86,16 +77,6 @@ q3BodyDef DiceDefinition()
     //definition.linearVelocity *= q3Sign(q3RandomFloat(-1.0f, 1.0f));
     definition.linearVelocity *= q3Sign(1.0f);
     //  definition.gravityScale = 1.f;
-    return definition;
-}
-
-q3BoxDef SquareBoxDefinition()
-{
-    q3BoxDef definition;
-    definition.SetRestitution(0);
-    q3Transform tx;
-    q3Identity(tx);
-    definition.Set(tx, q3Vec3(1.0f, 1.0f, 1.0f));
     return definition;
 }
 
