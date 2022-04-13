@@ -1,7 +1,9 @@
 #include <Magnum/GL/Mesh.h>
 #include <Magnum/Math/Color.h>
 #include <Magnum/Math/Vector.h>
+#include <Magnum/Math/Matrix3.h>
 #include <Magnum/Math/Matrix4.h>
+#include <Magnum/Math/Quaternion.h>
 #include <Magnum/Shaders/VertexColorGL.h>
 #include <Magnum/Shaders/PhongGL.h>
 #include <Magnum/MeshTools/Compile.h>
@@ -31,6 +33,8 @@ class Renderer : public q3Render
     Shaders::PhongGL _shaderPhong;
 
     GL::Mesh _lineMesh;
+    GL::Mesh _meshDie;
+    GL::Mesh _meshFloor;
     Matrix4 _transformation;
     Matrix4 _projection;
     Color3 _color;
@@ -47,12 +51,18 @@ public:
 
         //_mesh = MeshTools::compile(Primitives::cubeSolid());
 
-        _transformation = Matrix4::rotationX(30.0_degf) * Matrix4::rotationY(40.0_degf);
-        //_transformation = Matrix4::lookAt({20,20,10},{0, 0, 0},Vector3::yAxis(1.f));
+
+        auto camPos =
+            Matrix4::translation(Vector3::zAxis(-15.0f));
+        //_transformation = Matrix4::rotationX(80.0_degf) * Matrix4::rotationY(0.0_degf);
+        //_transformation = Matrix4::lookAt(camPos.translation(), {0, 0, 0}, Vector3::yAxis(1.f));
         _projection =
             Matrix4::perspectiveProjection(
-                55.0_degf, Vector2{640.f, 640.f}.aspectRatio(), 0.01f, 100.0f) *
-            Matrix4::translation(Vector3::zAxis(-35.0f));
+                65.0_degf, Vector2{GL::defaultFramebuffer.viewport().size()}.aspectRatio(), 0.01f, 100.0f)
+            * Matrix4::translation(Vector3::zAxis(-25.0f))
+            * Matrix4::rotationX(80.0_degf)
+            * Matrix4::rotationY(0.0_degf);
+            ;
         _color = Color3::fromHsv({35.0_degf, 1.0f, 1.0f});
 
         // Wireshader
@@ -69,6 +79,11 @@ public:
             .setTransformationMatrix(_transformation)
             .setNormalMatrix(_transformation.normalMatrix())
             .setProjectionMatrix(_projection);
+
+        _mesh.setPrimitive(GL::MeshPrimitive::Triangles)
+            .setCount(3);
+
+        _meshDie = MeshTools::compile(Primitives::cubeSolid());
     }
 
     void SetPenColor(f32 r, f32 g, f32 b, f32 a = 1.0f) override
@@ -91,7 +106,7 @@ public:
 
     void Line(f32 x, f32 y, f32 z) override
     {
-        //auto _lineMesh = MeshTools::compile(Primitives::line3D({x_, y_, z_}, {x, y, z}));
+        // auto _lineMesh = MeshTools::compile(Primitives::line3D({x_, y_, z_}, {x, y, z}));
         //_shader.draw(_lineMesh);
     }
 
@@ -108,14 +123,60 @@ public:
             {{x3, y3, z3}, 0x0000ff_rgbf}  // blue color
         };
 
-        _mesh.setPrimitive(GL::MeshPrimitive::Triangles)
-            .setCount(Containers::arraySize(vertices))
+        _mesh //.setPrimitive(GL::MeshPrimitive::Triangles)
+              //.setCount(Containers::arraySize(vertices))
             .addVertexBuffer(GL::Buffer{vertices}, 0,
                              Shaders::VertexColorGL3D::Position{},
                              Shaders::VertexColorGL3D::Color3{});
 
         _shaderWire.draw(_mesh);
         //_shaderPhong.draw(_mesh); // TODO: Fix lighting / normals?
+    }
+
+    void DrawDie(q3Body *body)
+    {
+        // body->GetLocalVector();
+        auto t = body->GetTransform();
+        auto q = body->GetQuaternion();
+
+        Vector3 position{t.position.x, t.position.y, t.position.z};
+
+        Matrix3x3 rotation{
+            Vector3{(float)t.rotation.ex.x, (float)t.rotation.ex.y, (float)t.rotation.ex.z},
+            Vector3{(float)t.rotation.ey.x, (float)t.rotation.ey.y, (float)t.rotation.ey.z},
+            Vector3{(float)t.rotation.ez.x, (float)t.rotation.ez.y, (float)t.rotation.ez.z},
+        };
+        auto transform = Matrix4::from(rotation , position)
+            * Matrix4::scaling({0.4f, 0.4f, 0.4f})
+            * _transformation;
+
+        using namespace Math::Literals;
+        _shaderWire
+            .setTransformationMatrix(transform)
+            .draw(_meshDie);
+    }
+    void DrawFloor(q3Body *body)
+    {
+        auto t = body->GetTransform();
+        auto q = body->GetQuaternion();
+
+        Vector3 position{t.position.x, t.position.y, t.position.z};
+
+        Matrix3x3 rotation{
+            Vector3{(float)t.rotation.ex.x, (float)t.rotation.ex.y, (float)t.rotation.ex.z},
+            Vector3{(float)t.rotation.ey.x, (float)t.rotation.ey.y, (float)t.rotation.ey.z},
+            Vector3{(float)t.rotation.ez.x, (float)t.rotation.ez.y, (float)t.rotation.ez.z},
+        };
+
+        auto transform = Matrix4::from(rotation, position)
+            * Matrix4::translation(Vector3::yAxis(0.2f))
+            * Matrix4::scaling({10.f, 0.2f, 10.f})
+            * _transformation;
+
+        using namespace Math::Literals;
+        _shaderPhong
+            .setTransformationMatrix(transform)
+            .draw(_meshDie);
     }
 
     void SetTriNormal(f32 x, f32 y, f32 z) override
