@@ -8,9 +8,10 @@ endif()
 
 set_directory_properties(PROPERTIES CORRADE_USE_PEDANTIC_FLAGS ON)
 
-add_executable(MyApplication 
+add_executable(MyApplication
 MyApplication.cpp
 Renderer.cpp
+q3Utils.cpp
 )
 target_link_libraries(MyApplication PRIVATE
     Magnum::Application
